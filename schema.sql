@@ -56,3 +56,9 @@ begin
     alter publication supabase_realtime add table public.records;
   end if;
 end $$;
+
+-- Yeni Supabase projelerinde tablolar giriş yapmış kullanıcılara otomatik açılmaz: izin ver.
+-- (Satır düzeyindeki güvenlik kuralları yukarıda, sadece izinli e-postalar veriye erişir.)
+grant usage on schema public to authenticated;
+grant select, insert, update, delete on public.records to authenticated;
+grant execute on function public.is_allowed() to authenticated;
