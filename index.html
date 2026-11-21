@@ -116,6 +116,8 @@ body{padding-bottom:env(safe-area-inset-bottom,0px)}
     <select id="fs"><option value="">Tüm mevsimler</option><option>Yaz</option><option>Kış</option><option>4 Mevsim</option></select>
     <select id="fl"><option value="">Tüm stok</option><option value="low">Sadece azalanlar</option></select>
     <button class="pri" id="add">+ Yeni lastik</button>
+    <button id="scan" type="button">Kamera ile ekle</button>
+    <input id="cam" type="file" accept="image/*" capture="environment" hidden>
     <button id="bulk">Toplu fiyat</button>
   </div>
   <div class="wrap"><table>
@@ -169,6 +171,7 @@ body{padding-bottom:env(safe-area-inset-bottom,0px)}
     <label>Alış fiyatı (₺)<input id="fbuy" type="number" min="0" inputmode="decimal"></label>
     <label>Satış fiyatı (₺)<input id="fsell" type="number" min="0" inputmode="decimal"></label>
   </div>
+  <div class="prev" id="fInfo" hidden></div>
   <div class="act">
     <button class="del" id="fdel" type="button">Sil</button>
     <button id="fcancel" type="button">Vazgeç</button>
@@ -302,7 +305,7 @@ $("sales").innerHTML=ts.length?ts.map(function(s){var d=new Date(s.ts);
 /* ---------- lastik ekle / düzenle ---------- */
 function num(id){return Math.max(0,parseFloat($(id).value)||0)}
 function openEdit(id){
- editId=id;var x=find(id)||{size:"",brand:"",model:"",season:"Yaz",qty:0,min:4,buy:"",sell:""};
+ editId=id;$("fInfo").hidden=true;var x=find(id)||{size:"",brand:"",model:"",season:"Yaz",qty:0,min:4,buy:"",sell:""};
  $("dt").textContent=id?"Lastiği düzenle":"Yeni lastik";$("fdel").hidden=!id;
  $("fsize").value=x.size;$("fbrand").value=x.brand;$("fmodel").value=x.model;$("fseason").value=x.season;
  $("fqty").value=x.qty;$("fmin").value=x.min;$("fbuy").value=x.buy;$("fsell").value=x.sell;$("dlg").showModal()}
@@ -363,6 +366,35 @@ $("bOk").onclick=function(){var pct=parseFloat($("bPct").value);if(isNaN(pct)||p
  if(!confirm(t.length+" lastiğin fiyatı %"+pct+" değişecek. Devam edilsin mi?"))return;
  t.forEach(function(x){putItem(Object.assign({},x,bulkNew(x)))});$("dBulk").close();toast(t.length+" lastiğin fiyatı güncellendi.")};
 $("bCancel").onclick=function(){$("dBulk").close()};
+
+/* ---------- kamera ile ekle ---------- */
+function fileToJpeg(file,max){return new Promise(function(res,rej){
+ var img=new Image(),u=URL.createObjectURL(file);
+ img.onload=function(){var s=Math.min(1,max/Math.max(img.naturalWidth,img.naturalHeight)),w=Math.round(img.naturalWidth*s),h=Math.round(img.naturalHeight*s);
+  var c=document.createElement("canvas");c.width=w;c.height=h;c.getContext("2d").drawImage(img,0,0,w,h);URL.revokeObjectURL(u);
+  res(c.toDataURL("image/jpeg",0.85).split(",")[1])};
+ img.onerror=function(){URL.revokeObjectURL(u);rej(new Error("image"))};img.src=u})}
+function normSize(s){return String(s||"").toUpperCase().replace(/\s+/g,"").replace(/Z?R/,"R")}
+function handleScan(r){
+ if(!r||(!r.size&&!r.brand)){toast("Yazı okunamadı. Tekrar dene.");return}
+ var size=r.size?String(r.size).trim():"",brand=String(r.brand||"").trim(),model=String(r.model||"").trim();
+ var m=size?items.filter(function(x){return normSize(x.size)===normSize(size)&&(x.brand||"").toLowerCase()===brand.toLowerCase()&&(x.model||"").toLowerCase()===model.toLowerCase()})[0]:null;
+ if(m){openRecv(m.id);$("recvSub").textContent+=" — kamerayla okundu, zaten kayıtlı";return}
+ openEdit(null);
+ $("fsize").value=size;$("fbrand").value=brand;$("fmodel").value=model;
+ if(["Yaz","Kış","4 Mevsim"].indexOf(r.season)>-1)$("fseason").value=r.season;
+ $("fqty").value=4;
+ var info=["Kamerayla okundu, alanları kontrol edip kaydet."];
+ if(r.load_speed)info.push("Yük/hız: "+r.load_speed+".");
+ if(/^\d{4}$/.test(r.dot||""))info.push("Üretim: 20"+r.dot.slice(2)+" yılı, "+r.dot.slice(0,2)+". hafta.");
+ if(r.confidence&&r.confidence!=="high")info.push("Okuma emin değil, özellikle ebadı kontrol et.");
+ $("fInfo").textContent=info.join(" ");$("fInfo").hidden=false}
+$("scan").onclick=function(){if(mode!=="db"){toast("Kamera için giriş yapılmış olması gerekir.");return}$("cam").value="";$("cam").click()};
+$("cam").onchange=async function(){var f=this.files[0];if(!f)return;
+ var b=$("scan");b.disabled=true;b.textContent="Okunuyor…";
+ try{var b64=await fileToJpeg(f,1600);handleScan(await window.Store.scan(b64))}
+ catch(e){toast(e&&e.status===404?"Kamera okuma henüz kurulmamış (README: Edge Function adımı).":e&&(e.status===401||e.status===403)?"Yetki yok, çıkış yapıp tekrar giriş yap.":"Okunamadı. Daha yakından, yan yüzü düz tutarak tekrar dene.")}
+ b.disabled=false;b.textContent="Kamera ile ekle"};
 
 /* ---------- liste olayları ---------- */
 $("rows").onclick=function(e){var b=e.target.closest("button");if(!b)return;var a=b.dataset.a,id=b.dataset.id;

@@ -130,5 +130,15 @@
     location.reload();
   }
 
-  window.Store = { init: init, email: function () { return mail; }, signOut: signOut };
+  async function scan(b64) {
+    var r = await sb.functions.invoke("scan-tire", { body: { image: b64, media_type: "image/jpeg" } });
+    if (r.error) {
+      var x = new Error(r.error.message || "hata");
+      x.status = r.error.context && r.error.context.status;
+      throw x;
+    }
+    return r.data;
+  }
+
+  window.Store = { init: init, email: function () { return mail; }, signOut: signOut, scan: scan };
 })();

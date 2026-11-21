@@ -41,3 +41,15 @@ Bir iki dakika sonra adres `https://KULLANICIADIN.github.io/lastik-stok/` olur.
 - Veriyi yazmak için internet gerekir. İnternet yokken uygulama açılır ama liste yüklenmez.
 - Bir kişiyi eklemek veya çıkarmak için Supabase'de hem Authentication → Users'a kullanıcı ekle hem de `allowed_users` tablosuna e-postasını yaz.
 - Yedek için sayfanın altındaki **Yedek indir** düğmesini kullan.
+
+## Kamera ile lastik ekleme (isteğe bağlı)
+
+Stok ekranındaki **Kamera ile ekle** düğmesi lastiğin yan yüzünü fotoğraflar, yapay zekâ ebat, marka, model, mevsim ve üretim tarihini okur ve "Yeni lastik" formunu doldurur. Kayıt, sen formu kontrol edip **Kaydet**'e basınca olur. Aynı lastik zaten kayıtlıysa yeni satır açmaz, **mal girişi** ekranını açar.
+
+Bunun için Anthropic hesabında bir API anahtarı ve Supabase'de küçük bir fonksiyon gerekir. Anahtar tarayıcıya hiç inmez, sadece Supabase'de saklanır.
+
+1. https://console.anthropic.com → hesap aç, **Billing**'den kredi yükle (birkaç dolar yeter), **Settings → Limits** bölümünden aylık harcama limiti koy, **API Keys → Create key** ile anahtar al.
+2. Supabase → **Edge Functions → Deploy a new function → Via Editor**. Adı tam olarak `scan-tire` olsun. `supabase/functions/scan-tire/index.ts` dosyasının içeriğini yapıştırıp **Deploy**'a bas.
+3. Supabase → **Edge Functions → Secrets** → **Add new secret**: ad `ANTHROPIC_API_KEY`, değer 1. adımdaki anahtar.
+
+İpuçları: Yazıyı yandan ışık vuracak şekilde, yakından ve düz tut. Siyah lastikte yazı kabartma olduğu için telefonun flaşını kapatıp lambayı yandan tutmak çoğu zaman daha iyi okutur. Okunan bilgiyi her zaman kontrol et, özellikle ebadı.
